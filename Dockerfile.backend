@@ -1,0 +1,25 @@
+# ---- Stage 1: Dependencies ----
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+# Copy package manifests first for better layer caching
+COPY backend/package*.json ./
+RUN npm ci --omit=dev
+
+# ---- Stage 2: Runtime ----
+FROM node:20-alpine AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy cached dependencies from deps stage
+COPY --chown=node:node --from=deps /app/node_modules ./node_modules
+# Copy application code
+COPY --chown=node:node backend/ .
+
+EXPOSE 4000
+
+# Run container as non-root user for security
+USER node
+
+CMD ["node", "src/index.js"]

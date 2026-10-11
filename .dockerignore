@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/build
+.git
+.gitignore
+.env
+.env.*
+*.md
+k8s
+observability
+.github
+docs
+coverage
+*.log
