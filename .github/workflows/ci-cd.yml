@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - main
       - "pre-release/v*"
       - "release/v*"
   workflow_dispatch:
@@ -52,6 +53,9 @@ jobs:
     if: github.event_name == 'push'
     needs: build-and-test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
       namespace: ${{ steps.meta.outputs.namespace }}
@@ -68,7 +72,7 @@ jobs:
           echo "tag=${SAFE_BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
           case "${GITHUB_REF_NAME}" in
-            master) echo "namespace=dev" >> "$GITHUB_OUTPUT" ;;
+            master|main) echo "namespace=dev" >> "$GITHUB_OUTPUT" ;;
             pre-release/v*) echo "namespace=preprod" >> "$GITHUB_OUTPUT" ;;
             release/v*) echo "namespace=release" >> "$GITHUB_OUTPUT" ;;
           esac
@@ -97,6 +101,8 @@ jobs:
         with:
           context: .
           file: Dockerfile.frontend
+          build-args: |
+            VITE_API_BASE_URL=/api
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_FRONTEND }}:${{ steps.meta.outputs.tag }}
@@ -129,7 +135,7 @@ jobs:
 
           # Point the deployments at the image just built and pushed.
           sed -i "s#ghcr.io/.*-backend:.*#${REGISTRY}/${IMAGE_BACKEND}:${TAG}#" /tmp/manifests/backend-deployment.yaml
-          sed -i "s#ghcr.io/.*-backend:.*#${REGISTRY}/${IMAGE_BACKEND}:${TAG}#" /tmp/manifests/bullmq-worker-deployment.yaml
+          sed -i "s#ghcr.io/.*-backend:.*#${REGISTRY}/${IMAGE_BACKEND}:${TAG}#" /tmp/manifests/bullmq-worker-deployment.yaml || true
           sed -i "s#ghcr.io/.*-frontend:.*#${REGISTRY}/${IMAGE_FRONTEND}:${TAG}#" /tmp/manifests/frontend-deployment.yaml
 
           # Re-target every manifest at the environment-specific namespace.
