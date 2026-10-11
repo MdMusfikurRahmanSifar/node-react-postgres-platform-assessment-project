@@ -4,12 +4,24 @@ import { initSchema, read, write, pingWrite } from "./db.js";
 import redis from "./redisClient.js";
 import { enqueueItemCreated } from "./queue.js";
 import { searchHealth } from "./search.js";
+import { metricsMiddleware, getMetrics, getContentType } from "./metrics.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(metricsMiddleware);
 
 const PORT = process.env.PORT || 4000;
+
+// Prometheus metrics endpoint scraped by Prometheus
+app.get("/metrics", async (req, res) => {
+  try {
+    res.set("Content-Type", getContentType());
+    res.send(await getMetrics());
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
